@@ -74,6 +74,10 @@
         <div id="register-form" class="hidden">
             <h3>Đăng ký tài khoản mới</h3>
             <input type="email" id="reg-email" placeholder="Email">
+            
+            <!-- Thêm ô nhập Họ Tên -->
+            <input type="text" id="reg-name" placeholder="Họ và tên (VD: Nguyễn Văn A)">
+            
             <div class="password-wrapper">
                 <input type="password" id="reg-password" placeholder="Mật khẩu (ít nhất 6 ký tự)">
                 <button type="button" class="toggle-password" onclick="togglePassword('reg-password', this)">Hiện</button>
@@ -89,7 +93,9 @@
     <div id="dashboard" class="hidden">
         <div class="card header-bar">
             <div>
-                <strong>Tài khoản: <span id="user-email"></span></strong><br>
+                <!-- Thay đổi giao diện hiển thị Tên và Email -->
+                <strong>Xin chào: <span id="user-name" style="color: #007bff;"></span></strong><br>
+                <small style="color:#666;">Email: <span id="user-email"></span></small><br>
                 <small style="color:#666; display:inline-block; margin-top:8px;">
                     Mã thiết bị liên kết: <span id="display-device-code" class="device-tag">Đang tải...</span>
                 </small>
@@ -127,7 +133,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+        // Cập nhật thêm hàm updateProfile để lưu tên vào tài khoản
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile }
             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -179,9 +186,15 @@
         // --- XỬ LÝ ĐĂNG KÝ ---
         $('btn-signup').onclick = async () => {
             const email = $('reg-email').value;
+            const name = $('reg-name').value.trim(); // Lấy tên
             const password = $('reg-password').value;
             const devCode = $('reg-device').value.trim();
             
+            if (!name) {
+                $('auth-msg').style.color = 'red';
+                $('auth-msg').textContent = 'Vui lòng nhập Họ và tên!';
+                return;
+            }
             if (!devCode) {
                 $('auth-msg').style.color = 'red';
                 $('auth-msg').textContent = 'Vui lòng nhập mã thiết bị để liên kết!';
@@ -190,11 +203,19 @@
 
             $('auth-msg').textContent = '';
             try {
+                // Tạo tài khoản
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Lưu tên hiển thị vào hồ sơ Firebase (đăng nhập máy nào cũng thấy)
+                await updateProfile(userCredential.user, { displayName: name });
+                
+                // Lưu mã thiết bị
                 saveDeviceCode(userCredential.user.uid, devCode);
+                
                 $('auth-msg').style.color = 'green';
                 $('auth-msg').textContent = 'Đăng ký thành công!';
                 $('reg-device').value = '';
+                $('reg-name').value = '';
             } catch (e) { 
                 $('auth-msg').style.color = 'red';
                 $('auth-msg').textContent = 'Lỗi: ' + e.message; 
@@ -225,10 +246,13 @@
             if (user) {
                 $('auth-section').classList.add('hidden');
                 $('dashboard').classList.remove('hidden');
+                
+                // Lấy tên hiển thị từ Firebase (nếu chưa có thì hiển thị "Người dùng")
+                $('user-name').textContent = user.displayName || 'Người dùng';
                 $('user-email').textContent = user.email;
                 
                 const savedCode = getSavedDeviceCode(user.uid);
-                $('display-device-code').textContent = savedCode || 'Chưa liên kết (Lỗi)';
+                $('display-device-code').textContent = savedCode || 'Chưa liên kết trên thiết bị này';
 
                 resetStats();
                 $('records-list').innerHTML = '';
@@ -246,7 +270,7 @@
                 $('login-email').value = '';
                 $('login-password').value = '';
                 $('login-password').type = 'password'; 
-                $('login-password').nextElementSibling.textContent = 'Hiện'; // Reset lại thành chữ Hiện
+                $('login-password').nextElementSibling.textContent = 'Hiện';
             }
         });
 
