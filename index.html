@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống theo dõi sức khỏe</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f7fa; color: #333; }
+        h1, h2, h3 { color: #1a1a2e; font-weight: 600; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+        input:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
+        button { cursor: pointer; background: #007bff; color: white; border: none; font-weight: 600; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .hidden { display: none !important; }
+        .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .stat:last-child { border-bottom: none; }
+        .stat-value { font-weight: 700; font-size: 18px; color: #007bff; }
+        .records-list { max-height: 400px; overflow-y: auto; margin-top: 16px; }
+        .record-item { padding: 12px; background: #f9f9f9; border-left: 4px solid #007bff; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .record-item .time { color: #888; font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 6px;}
+        .record-item .data { margin-top: 6px; line-height: 1.5; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { width: auto; padding: 10px 20px; background: #dc3545; margin: 0;}
+        .logout-btn:hover { background: #a71d2a; }
+        .live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #28a745; animation: blink 1s infinite; margin-right: 6px; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+        .device-tag { background: #e2e3e5; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #444; }
+        .toggle-text { text-align: center; font-size: 13px; margin-top: 15px; color: #007bff; cursor: pointer; text-decoration: underline; }
+        
+        /* CSS cho nút ẩn/hiện mật khẩu bằng chữ */
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper input { padding-right: 50px; margin: 8px 0; }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 13px;
+            color: #007bff;
+            user-select: none;
+            background: none;
+            border: none;
+            padding: 0;
+            width: auto;
+            margin: 0;
+            font-weight: 600;
+        }
+        .toggle-password:hover { color: #0056b3; background: none; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <h1>Hệ thống theo dõi sức khỏe</h1>
+
+    <div id="auth-section" class="card">
+        <!-- FORM ĐĂNG NHẬP -->
+        <div id="login-form">
+            <h3>Đăng nhập</h3>
+            <input type="email" id="login-email" placeholder="Email">
+            <div class="password-wrapper">
+                <input type="password" id="login-password" placeholder="Mật khẩu">
+                <button type="button" class="toggle-password" onclick="togglePassword('login-password', this)">Hiện</button>
+            </div>
+            <button id="btn-login" style="background:#28a745; margin-top: 12px;">Đăng nhập</button>
+            <div class="toggle-text" onclick="toggleAuthForm('register')">Chưa có tài khoản? Đăng ký ngay</div>
+        </div>
+
+        <!-- FORM ĐĂNG KÝ -->
+        <div id="register-form" class="hidden">
+            <h3>Đăng ký tài khoản mới</h3>
+            <input type="email" id="reg-email" placeholder="Email">
+            <div class="password-wrapper">
+                <input type="password" id="reg-password" placeholder="Mật khẩu (ít nhất 6 ký tự)">
+                <button type="button" class="toggle-password" onclick="togglePassword('reg-password', this)">Hiện</button>
+            </div>
+            <input type="text" id="reg-device" placeholder="Mã thiết bị y tế (VD: ESP32-001)">
+            <button id="btn-signup" style="margin-top: 12px;">Tạo tài khoản</button>
+            <div class="toggle-text" onclick="toggleAuthForm('login')">Đã có tài khoản? Đăng nhập</div>
+        </div>
+
+        <p id="auth-msg" style="color: red; font-size: 13px; margin-top: 8px; text-align: center;"></p>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <div class="card header-bar">
+            <div>
+                <strong>Tài khoản: <span id="user-email"></span></strong><br>
+                <small style="color:#666; display:inline-block; margin-top:8px;">
+                    Mã thiết bị liên kết: <span id="display-device-code" class="device-tag">Đang tải...</span>
+                </small>
+            </div>
+            <button id="btn-logout" class="logout-btn">Đăng xuất</button>
+        </div>
+
+        <div class="card">
+            <h3><span class="live-dot"></span> Chỉ số mới nhất (Realtime)</h3>
+            <div class="stat"><span>Nhịp tim</span><span class="stat-value" id="stat-heart">— bpm</span></div>
+            <div class="stat"><span>Huyết áp</span><span class="stat-value" id="stat-bp">— mmHg</span></div>
+            <div class="stat"><span>Nhiệt độ</span><span class="stat-value" id="stat-temp">— °C</span></div>
+            <div class="stat"><span>Số bước</span><span class="stat-value" id="stat-steps">—</span></div>
+        </div>
+
+        <div class="card">
+            <h3>Gửi dữ liệu sức khỏe (Nhập tay)</h3>
+            <div class="row">
+                <input type="number" id="in-heart" placeholder="Nhịp tim (bpm)">
+                <input type="text" id="in-bp" placeholder="Huyết áp (VD 120/80)">
+            </div>
+            <div class="row">
+                <input type="number" id="in-temp" step="0.1" placeholder="Nhiệt độ (°C)">
+                <input type="number" id="in-steps" placeholder="Số bước">
+            </div>
+            <button id="btn-send">Gửi dữ liệu</button>
+            <p id="send-msg" style="font-size:13px; margin-top:8px;"></p>
+        </div>
+
+        <div class="card">
+            <h3>Lịch sử dữ liệu (<span id="record-count">0</span> bản ghi)</h3>
+            <div class="records-list" id="records-list"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBGYMJAbGzqt7P-A81ZaTH36e7TfeOZ8cQ", 
+            authDomain: "projectyte-39e44.firebaseapp.com", 
+            projectId: "projectyte-39e44", 
+            storageBucket: "projectyte-39e44.firebasestorage.app", 
+            messagingSenderId: "324613625858", 
+            appId: "1:324613625858:web:3ff3f0798993708c396f1b" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const $ = (id) => document.getElementById(id);
+        let unsubscribeRecords = null;
+
+        // --- HÀM XỬ LÝ ẨN/HIỆN MẬT KHẨU ---
+        window.togglePassword = (inputId, btnElement) => {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                btnElement.textContent = "Ẩn";
+            } else {
+                input.type = "password";
+                btnElement.textContent = "Hiện";
+            }
+        };
+
+        // --- HÀM CHUYỂN ĐỔI FORM ĐĂNG NHẬP / ĐĂNG KÝ ---
+        window.toggleAuthForm = (form) => {
+            $('auth-msg').textContent = '';
+            if (form === 'register') {
+                $('login-form').classList.add('hidden');
+                $('register-form').classList.remove('hidden');
+            } else {
+                $('register-form').classList.add('hidden');
+                $('login-form').classList.remove('hidden');
+            }
+        };
+
+        // --- QUẢN LÝ MÃ THIẾT BỊ ---
+        const getSavedDeviceCode = (uid) => localStorage.getItem('dev_code_' + uid);
+        const saveDeviceCode = (uid, code) => localStorage.setItem('dev_code_' + uid, code);
+
+        // --- XỬ LÝ ĐĂNG KÝ ---
+        $('btn-signup').onclick = async () => {
+            const email = $('reg-email').value;
+            const password = $('reg-password').value;
+            const devCode = $('reg-device').value.trim();
+            
+            if (!devCode) {
+                $('auth-msg').style.color = 'red';
+                $('auth-msg').textContent = 'Vui lòng nhập mã thiết bị để liên kết!';
+                return;
+            }
+
+            $('auth-msg').textContent = '';
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                saveDeviceCode(userCredential.user.uid, devCode);
+                $('auth-msg').style.color = 'green';
+                $('auth-msg').textContent = 'Đăng ký thành công!';
+                $('reg-device').value = '';
+            } catch (e) { 
+                $('auth-msg').style.color = 'red';
+                $('auth-msg').textContent = 'Lỗi: ' + e.message; 
+            }
+        };
+
+        // --- XỬ LÝ ĐĂNG NHẬP ---
+        $('btn-login').onclick = async () => {
+            const email = $('login-email').value;
+            const password = $('login-password').value;
+            
+            $('auth-msg').textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (e) { 
+                $('auth-msg').style.color = 'red';
+                $('auth-msg').textContent = 'Lỗi: ' + e.message; 
+            }
+        };
+
+        // --- ĐĂNG XUẤT ---
+        $('btn-logout').onclick = () => signOut(auth);
+
+        // --- THEO DÕI TRẠNG THÁI ĐĂNG NHẬP ---
+        onAuthStateChanged(auth, (user) => {
+            if (unsubscribeRecords) { unsubscribeRecords(); unsubscribeRecords = null; }
+
+            if (user) {
+                $('auth-section').classList.add('hidden');
+                $('dashboard').classList.remove('hidden');
+                $('user-email').textContent = user.email;
+                
+                const savedCode = getSavedDeviceCode(user.uid);
+                $('display-device-code').textContent = savedCode || 'Chưa liên kết (Lỗi)';
+
+                resetStats();
+                $('records-list').innerHTML = '';
+                $('record-count').textContent = '0';
+
+                startRealtimeListener(user.uid);
+            } else {
+                $('auth-section').classList.remove('hidden');
+                $('dashboard').classList.add('hidden');
+                resetStats();
+                $('records-list').innerHTML = '';
+                $('record-count').textContent = '0';
+                
+                toggleAuthForm('login');
+                $('login-email').value = '';
+                $('login-password').value = '';
+                $('login-password').type = 'password'; 
+                $('login-password').nextElementSibling.textContent = 'Hiện'; // Reset lại thành chữ Hiện
+            }
+        });
+
+        // --- HIỂN THỊ DỮ LIỆU REALTIME ---
+        function startRealtimeListener(uid) {
+            const recordsRef = collection(db, 'users', uid, 'health_records');
+            const q = query(recordsRef, orderBy('createdAt', 'desc'), limit(50));
+
+            unsubscribeRecords = onSnapshot(q, (snapshot) => {
+                const list = $('records-list');
+                list.innerHTML = '';
+                const records = [];
+                snapshot.forEach((doc) => records.push({ id: doc.id, ...doc.data() }));
+
+                $('record-count').textContent = records.length;
+                if (records.length === 0) {
+                    list.innerHTML = '<p style="color:#999;text-align:center;">Chưa có dữ liệu.</p>';
+                    resetStats();
+                    return;
+                }
+
+                const latest = records[0];
+                $('stat-heart').textContent = (latest.heartRate ?? '—') + ' bpm';
+                $('stat-bp').textContent    = (latest.bloodPressure ?? '—') + ' mmHg';
+                $('stat-temp').textContent  = (latest.temperature ?? '—') + ' °C';
+                $('stat-steps').textContent = latest.stepCount?.toLocaleString('vi-VN') ?? '—';
+
+                records.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'record-item';
+                    const time = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString('vi-VN') : 'Đang đồng bộ...';
+                    const senderTag = r.deviceId ? `<span class="device-tag">${r.deviceId}</span>` : '';
+
+                    div.innerHTML = `
+                        <div class="time"><span>${time}</span> ${senderTag}</div>
+                        <div class="data">
+                            Nhịp tim: <b>${r.heartRate ?? '—'}</b> bpm | 
+                            Huyết áp: <b>${r.bloodPressure ?? '—'}</b> | 
+                            Nhiệt độ: <b>${r.temperature ?? '—'}</b> °C | 
+                            Bước chân: <b>${r.stepCount?.toLocaleString('vi-VN') ?? '—'}</b>
+                        </div>`;
+                    list.appendChild(div);
+                });
+            }, (err) => {
+                $('records-list').innerHTML = `<p style="color:red;">Lỗi: ${err.message}</p>`;
+            });
+        }
+
+        function resetStats() {
+            $('stat-heart').textContent = '— bpm';
+            $('stat-bp').textContent = '— mmHg';
+            $('stat-temp').textContent = '— °C';
+            $('stat-steps').textContent = '—';
+        }
+
+        // --- GỬI DỮ LIỆU NHẬP TAY ---
+        $('btn-send').onclick = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const data = {
+                heartRate: parseInt($('in-heart').value) || null,
+                bloodPressure: $('in-bp').value.trim() || null,
+                temperature: parseFloat($('in-temp').value) || null,
+                stepCount: parseInt($('in-steps').value) || null,
+                deviceId: getSavedDeviceCode(user.uid) || 'Nhập tay', 
+                createdAt: serverTimestamp()
+            };
+
+            if (Object.values(data).slice(0, 4).every(v => v === null)) {
+                $('send-msg').style.color = 'red';
+                $('send-msg').textContent = 'Vui lòng nhập ít nhất 1 chỉ số.';
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, 'users', user.uid, 'health_records'), data);
+                $('send-msg').style.color = 'green';
+                $('send-msg').textContent = 'Gửi dữ liệu thành công!';
+                ['in-heart', 'in-bp', 'in-temp', 'in-steps'].forEach(id => $(id).value = '');
+                setTimeout(() => $('send-msg').textContent = '', 3000);
+            } catch (e) {
+                $('send-msg').style.color = 'red';
+                $('send-msg').textContent = 'Lỗi: ' + e.message;
+            }
+        };
+    </script>
+</body>
+</html>
