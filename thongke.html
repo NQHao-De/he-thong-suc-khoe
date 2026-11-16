@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Thống Kê Sức Khỏe</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #eaeaea;
+            --nav-bg: #ffffff;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --hover-bg: #f9f9f9;
+            --input-bg: #ffffff;
+            --input-border: #cccccc;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333333;
+            --nav-bg: #1e1e1e;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            --hover-bg: #2a2a2a;
+            --input-bg: #2d2d2d;
+            --input-border: #444444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+        h1, h3 { color: var(--text-color); font-weight: 600; }
+        
+        /* Thanh Navbar */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: var(--nav-bg); box-shadow: var(--nav-shadow);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; z-index: 1000; transition: background 0.3s;
+        }
+        .navbar-brand { font-size: 20px; font-weight: 700; color: #007bff; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-link { text-decoration: none; color: #007bff; font-weight: 600; font-size: 15px; }
+        .nav-link:hover { text-decoration: underline; }
+        
+        .nav-user { position: relative; }
+        .avatar-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #007bff; color: white; font-weight: bold; font-size: 18px;
+            border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s; overflow: hidden;
+        }
+        .avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-btn:hover { opacity: 0.8; }
+
+        .dropdown-menu {
+            position: absolute; top: 50px; right: 0;
+            background: var(--card-bg); border-radius: 8px; min-width: 220px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
+            display: none; flex-direction: column; overflow: hidden; z-index: 1001;
+        }
+        .dropdown-menu.show { display: flex; }
+        .dropdown-header { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .dropdown-header strong { display: block; font-size: 15px; color: var(--text-color);}
+        .dropdown-header small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px;}
+        
+        .dropdown-item {
+            padding: 12px 15px; text-decoration: none; color: var(--text-color);
+            font-size: 14px; cursor: pointer; border: none; background: transparent;
+            text-align: left; display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.2s;
+        }
+        .dropdown-item:hover { background: var(--hover-bg); }
+        .dropdown-item.danger { color: #dc3545; border-top: 1px solid var(--border-color); }
+
+        .container { max-width: 1200px; margin: 80px auto 20px auto; padding: 0 20px; }
+        .card { background: var(--card-bg); padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+
+        .filter-group { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;}
+        .filter-btn { padding: 8px 16px; border: 1px solid var(--border-color); background: var(--nav-bg); border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-color); }
+        .filter-btn.active { background: #007bff; color: white; border-color: #007bff; }
+        .date-picker { padding: 9px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-weight: 600; color: var(--text-color); background: var(--nav-bg); outline: none; }
+
+        /* Lưới biểu đồ: 2 cột cho màn hình lớn, 1 cột cho đt */
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+        .chart-box { position: relative; height: 300px; width: 100%; background: var(--nav-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+        .diagnosis-box { padding: 15px; border-radius: 8px; background: var(--hover-bg); border-left: 5px solid var(--text-muted); margin-top: 20px; font-size: 14px;}
+
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--hover-bg); color: var(--text-color); font-weight: 600; }
+        tr:hover { background-color: var(--hover-bg); }
+        .status-ok { color: #28a745; font-weight: bold; }
+        .status-warn { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- THANH NAVBAR (Đã đồng bộ với index) -->
+    <nav class="navbar">
+        <div class="navbar-brand">HHTDSK</div>
+        <div class="nav-right">
+            <a href="index.html" class="nav-link">Trang chủ</a>
+            
+            <div class="nav-user">
+                <button class="avatar-btn" id="avatar-btn" onclick="toggleDropdown()">
+                    <span id="avatar-text">U</span>
+                    <img id="avatar-image" src="" alt="Avatar" class="hidden" style="display:none;">
+                </button>
+                
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-header">
+                        <strong id="nav-user-name">Người dùng</strong>
+                        <small id="nav-user-email">email@gmail.com</small>
+                    </div>
+                    <button class="dropdown-item" onclick="toggleTheme()" id="theme-toggle-btn">
+                        <span>Giao diện Sáng/Tối</span>
+                        <span id="theme-icon">Tối</span>
+                    </button>
+                    <button class="dropdown-item danger" id="btn-logout">
+                        <span>Đăng xuất</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 30px;">Thống Kê Sức Khỏe</h1>
+
+        <div class="card">
+            <h3>Biểu đồ sức khỏe</h3>
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="changeTimeFilter('today', this)">Hôm nay (Theo giờ)</button>
+                <button class="filter-btn" onclick="changeTimeFilter('week', this)">7 ngày qua</button>
+                <button class="filter-btn" onclick="changeTimeFilter('month', this)">30 ngày qua</button>
+                <span style="margin-left: 10px; font-weight: 600; color: var(--text-muted);">Hoặc chọn ngày:</span>
+                <input type="date" id="custom-date" class="date-picker" onchange="changeTimeFilter('custom', null)">
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-box"><canvas id="chartHeart"></canvas></div>
+                <div class="chart-box"><canvas id="chartBp"></canvas></div>
+                <div class="chart-box"><canvas id="chartTemp"></canvas></div>
+                <div class="chart-box"><canvas id="chartSteps"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Chẩn đoán sức khỏe (7 ngày gần nhất)</h3>
+            <div id="diagnosis-box" class="diagnosis-box">Đang phân tích dữ liệu...</div>
+        </div>
+
+        <div class="card">
+            <h3>Bảng số liệu chi tiết 7 ngày gần nhất</h3>
+            <div class="table-container">
+                <table id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Nhịp tim TB (bpm)</th>
+                            <th>Huyết áp TB (mmHg)</th>
+                            <th>Nhiệt độ TB (°C)</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-tbody">
+                        <tr><td colspan="5" style="text-align: center; color: #888;">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBGYMJAbGzqt7P-A81ZaTH36e7TfeOZ8cQ", 
+            authDomain: "projectyte-39e44.firebaseapp.com", 
+            projectId: "projectyte-39e44", 
+            storageBucket: "projectyte-39e44.firebasestorage.app", 
+            messagingSenderId: "324613625858", 
+            appId: "1:324613625858:web:3ff3f0798993708c396f1b" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const $ = (id) => document.getElementById(id);
+        let unsubscribeRecords = null;
+        let charts = { heart: null, bp: null, temp: null, steps: null };
+        let allRecords = []; 
+        let currentFilter = 'today'; 
+
+        // --- THEME TOGGLE ---
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        window.toggleTheme = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeIcon(theme);
+            if (allRecords.length > 0) updateCharts(currentFilter);
+        };
+
+        function updateThemeIcon(theme) {
+            document.getElementById('theme-icon').textContent = theme === 'light' ? 'Tối' : 'Sáng';
+        }
+
+        window.toggleDropdown = () => {
+            $('dropdown-menu').classList.toggle('show');
+        };
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.nav-user')) {
+                $('dropdown-menu').classList.remove('show');
+            }
+        }
+
+        $('btn-logout').onclick = () => signOut(auth);
+
+        // --- THEO DÕI ĐĂNG NHẬP ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                $('nav-user-name').textContent = user.displayName || 'Người dùng';
+                $('nav-user-email').textContent = user.email;
+                
+                // Lấy Avatar
+                const userDocRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userDocRef);
+                if (userSnap.exists() && userSnap.data().avatar) {
+                    $('avatar-image').src = userSnap.data().avatar;
+                    $('avatar-image').style.display = 'block';
+                    $('avatar-text').style.display = 'none';
+                } else {
+                    $('avatar-image').style.display = 'none';
+                    $('avatar-text').style.display = 'block';
+                    $('avatar-text').textContent = (user.displayName || 'U').charAt(0).toUpperCase();
+                }
+
+                startRealtimeListener(user.uid);
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        function startRealtimeListener(uid) {
+            const recordsRef = collection(db, 'users', uid, 'health_records');
+            const q = query(recordsRef, orderBy('createdAt', 'desc'), limit(200)); 
+
+            unsubscribeRecords = onSnapshot(q, (snapshot) => {
+                allRecords = [];
+                snapshot.forEach((doc) => allRecords.push({ id: doc.id, ...doc.data() }));
+
+                if (allRecords.length === 0) {
+                    document.getElementById('stats-tbody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Chưa có dữ liệu.</td></tr>';
+                    document.getElementById('diagnosis-box').innerHTML = 'Chưa có đủ dữ liệu để chẩn đoán.';
+                    return;
+                }
+
+                updateCharts(currentFilter);
+                processWeeklyTableAndDiagnosis(allRecords);
+            }, (err) => {
+                document.getElementById('stats-tbody').innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Lỗi: ${err.message}</td></tr>`;
+            });
+        }
+
+        window.changeTimeFilter = (filter, btn) => {
+            currentFilter = filter;
+            if (filter !== 'custom') {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                if(btn) btn.classList.add('active');
+                document.getElementById('custom-date').value = '';
+            } else {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            }
+            if (allRecords.length > 0) updateCharts(currentFilter);
+        };
+
+        function updateCharts(filterType) {
+            const stats = {};
+            let labels = [];
+            const hrData = [], bpData = [], tempData = [], stepsData = [];
+            let titleSuffix = '';
+
+            if (filterType === 'today') {
+                const todayStr = new Date().toLocaleDateString('vi-VN');
+                const todayRecords = allRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate().toLocaleDateString('vi-VN') === todayStr).reverse();
+                
+                todayRecords.forEach(r => {
+                    const timeStr = r.createdAt.toDate().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                    if (!stats[timeStr]) stats[timeStr] = { hr: [], bp: [], temp: [], steps: [] };
+                    if (r.heartRate) stats[timeStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[timeStr].bp.push(sys); }
+                    if (r.temperature) stats[timeStr].temp.push(r.temperature);
+                    if (r.stepCount) stats[timeStr].steps.push(r.stepCount);
+                });
+                titleSuffix = '(Hôm nay)';
+
+            } else if (filterType === 'custom') {
+                const dateInput = document.getElementById('custom-date').value;
+                if (!dateInput) return; 
+                const [year, month, day] = dateInput.split('-');
+                const targetDateStr = `${day}/${month}/${year}`;
+                
+                const customRecords = allRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate().toLocaleDateString('vi-VN') === targetDateStr).reverse();
+                
+                customRecords.forEach(r => {
+                    const timeStr = r.createdAt.toDate().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                    if (!stats[timeStr]) stats[timeStr] = { hr: [], bp: [], temp: [], steps: [] };
+                    if (r.heartRate) stats[timeStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[timeStr].bp.push(sys); }
+                    if (r.temperature) stats[timeStr].temp.push(r.temperature);
+                    if (r.stepCount) stats[timeStr].steps.push(r.stepCount);
+                });
+                titleSuffix = `(Ngày ${targetDateStr})`;
+
+            } else {
+                const limitDays = filterType === 'week' ? 7 : 30;
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - limitDays);
+                cutoffDate.setHours(0,0,0,0);
+
+                const filteredRecords = allRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate() >= cutoffDate).reverse();
+
+                filteredRecords.forEach(r => {
+                    const dateStr = r.createdAt.toDate().toLocaleDateString('vi-VN');
+                    if (!stats[dateStr]) stats[dateStr] = { hr: [], bp: [], temp: [], steps: [] };
+                    if (r.heartRate) stats[dateStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[dateStr].bp.push(sys); }
+                    if (r.temperature) stats[dateStr].temp.push(r.temperature);
+                    if (r.stepCount) stats[dateStr].steps.push(r.stepCount);
+                });
+                titleSuffix = filterType === 'week' ? '(7 ngày qua)' : '(30 ngày qua)';
+            }
+
+            if (Object.keys(stats).length === 0) {
+                labels = ['Không có dữ liệu'];
+                hrData.push(null); bpData.push(null); tempData.push(null); stepsData.push(null);
+            } else {
+                labels = Object.keys(stats);
+                labels.forEach(key => {
+                    const s = stats[key];
+                    hrData.push(s.hr.length ? Math.round(s.hr.reduce((a,b)=>a+b,0)/s.hr.length) : null);
+                    bpData.push(s.bp.length ? Math.round(s.bp.reduce((a,b)=>a+b,0)/s.bp.length) : null);
+                    tempData.push(s.temp.length ? parseFloat((s.temp.reduce((a,b)=>a+b,0)/s.temp.length).toFixed(1)) : null);
+                    stepsData.push(s.steps.length ? s.steps.reduce((a,b)=>a+b,0) : null);
+                });
+            }
+
+            renderChart('chartHeart', 'heart', 'Nhịp tim (bpm) ' + titleSuffix, labels, hrData, 'rgba(220, 53, 69, 1)', 'line');
+            renderChart('chartBp', 'bp', 'Huyết áp (mmHg) ' + titleSuffix, labels, bpData, 'rgba(255, 193, 7, 1)', 'line');
+            renderChart('chartTemp', 'temp', 'Nhiệt độ (°C) ' + titleSuffix, labels, tempData, 'rgba(23, 162, 184, 1)', 'line');
+            renderChart('chartSteps', 'steps', 'Số bước ' + titleSuffix, labels, stepsData, 'rgba(0, 123, 255, 0.8)', 'bar');
+        }
+
+        function processWeeklyTableAndDiagnosis(records) {
+            const dailyStats = {};
+            records.forEach(r => {
+                if (!r.createdAt?.toDate) return;
+                const dateStr = r.createdAt.toDate().toLocaleDateString('vi-VN'); 
+                if (!dailyStats[dateStr]) dailyStats[dateStr] = { hr: [], bp: [], temp: [] };
+                if (r.heartRate) dailyStats[dateStr].hr.push(r.heartRate);
+                if (r.bloodPressure) {
+                    const systolic = parseInt(r.bloodPressure.split('/')[0]);
+                    if (!isNaN(systolic)) dailyStats[dateStr].bp.push(systolic);
+                }
+                if (r.temperature) dailyStats[dateStr].temp.push(r.temperature);
+            });
+
+            const sortedDates = Object.keys(dailyStats).sort((a, b) => {
+                const [d1, m1, y1] = a.split('/').map(Number);
+                const [d2, m2, y2] = b.split('/').map(Number);
+                return new Date(y1, m1-1, d1) - new Date(y2, m2-1, d2);
+            }).slice(-7);
+
+            const diagnoses = [];
+            let tableHTML = '';
+
+            sortedDates.forEach(dateStr => {
+                const s = dailyStats[dateStr];
+                const avgHR = s.hr.length ? Math.round(s.hr.reduce((a, b) => a + b, 0) / s.hr.length) : 0;
+                const avgBP = s.bp.length ? Math.round(s.bp.reduce((a, b) => a + b, 0) / s.bp.length) : 0;
+                const avgTemp = s.temp.length ? parseFloat((s.temp.reduce((a, b) => a + b, 0) / s.temp.length).toFixed(1)) : 0;
+
+                let warnHR = false, warnBP = false, warnTemp = false;
+                let reasons = [];
+
+                if (avgHR > 100 || (avgHR < 60 && avgHR !== 0)) { warnHR = true; reasons.push(`Nhịp tim TB bất thường (${avgHR})`); }
+                if (avgBP > 140 || (avgBP < 90 && avgBP !== 0)) { warnBP = true; reasons.push(`Huyết áp TB bất thường (${avgBP})`); }
+                if (avgTemp > 37.5 || (avgTemp < 35.5 && avgTemp !== 0)) { warnTemp = true; reasons.push(`Nhiệt độ TB bất thường (${avgTemp}°C)`); }
+
+                const isWarning = warnHR || warnBP || warnTemp;
+                if (isWarning) diagnoses.push(`<b>Ngày ${dateStr}:</b> Cần theo dõi nghiêm ngặt (${reasons.join(', ')})`);
+
+                tableHTML += `
+                    <tr>
+                        <td><b>${dateStr}</b></td>
+                        <td>${avgHR} bpm</td>
+                        <td>${avgBP} mmHg</td>
+                        <td>${avgTemp} °C</td>
+                        <td class="${isWarning ? 'status-warn' : 'status-ok'}">${isWarning ? 'Cảnh báo' : 'Bình thường'}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('stats-tbody').innerHTML = tableHTML || '<tr><td colspan="5" style="text-align: center;">Chưa có dữ liệu.</td></tr>';
+
+            const dBox = document.getElementById('diagnosis-box');
+            if (diagnoses.length > 0) {
+                dBox.style.borderLeftColor = '#dc3545';
+                dBox.style.background = '#f8d7da';
+                dBox.style.color = '#721c24';
+                dBox.innerHTML = `<b>Hệ thống phát hiện các ngày bất thường:</b><br>` + diagnoses.join('<br>');
+            } else {
+                dBox.style.borderLeftColor = '#28a745';
+                dBox.style.background = '#d4edda';
+                dBox.style.color = '#155724';
+                dBox.innerHTML = `<b>Chẩn đoán:</b> Các chỉ số sức khỏe trong 7 ngày qua đều ổn định.`;
+            }
+        }
+
+        function renderChart(canvasId, chartKey, label, labels, data, color, type) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[chartKey]) { charts[chartKey].destroy(); }
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
+            const gridColor = isDark ? '#333333' : '#eaeaea';
+
+            charts[chartKey] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: type === 'bar' ? color : 'rgba(0,0,0,0)',
+                        borderColor: color,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointBackgroundColor: color,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: label, color: textColor, font: {size: 14, weight: 'bold'} }
+                    },
+                    scales: {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: false }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

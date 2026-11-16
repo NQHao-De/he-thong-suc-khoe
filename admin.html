@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang Quản Trị - HHTDSK</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #eaeaea;
+            --nav-bg: #ffffff;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --hover-bg: #f9f9f9;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333333;
+            --nav-bg: #1e1e1e;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            --hover-bg: #2a2a2a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+        h1, h2, h3 { color: var(--text-color); font-weight: 600; }
+        
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: var(--nav-bg); box-shadow: var(--nav-shadow);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; z-index: 1000; transition: background 0.3s;
+        }
+        .navbar-brand { font-size: 20px; font-weight: 700; color: #dc3545; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-link { text-decoration: none; color: #007bff; font-weight: 600; font-size: 15px; }
+        .nav-link:hover { text-decoration: underline; }
+        
+        .container { max-width: 1200px; margin: 80px auto 20px auto; padding: 0 20px; }
+        .card { background: var(--card-bg); padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+
+        .admin-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 768px) { .admin-layout { grid-template-columns: 1fr; } }
+
+        .user-list { list-style: none; }
+        .user-item { 
+            padding: 12px 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; 
+            transition: background 0.2s; font-size: 14px; word-break: break-all;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .user-item:hover, .user-item.active { background: var(--hover-bg); border-left: 4px solid #007bff; }
+        
+        .user-avatar {
+            width: 35px; height: 35px; border-radius: 50%; object-fit: cover;
+            background: #007bff; color: white; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 14px; flex-shrink: 0;
+        }
+        .user-info { overflow: hidden; }
+        .user-info strong { display: block; color: var(--text-color); margin-bottom: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .user-info small { display: block; color: var(--text-muted); }
+
+        .filter-group { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;}
+        .filter-btn { padding: 8px 16px; border: 1px solid var(--border-color); background: var(--nav-bg); border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-color); }
+        .filter-btn.active { background: #007bff; color: white; border-color: #007bff; }
+        
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px;}
+        .chart-box { position: relative; height: 250px; width: 100%; }
+        
+        .table-container { overflow-x: auto; margin-top: 20px; max-height: 400px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--hover-bg); color: var(--text-color); font-weight: 600; position: sticky; top: 0;}
+        tr:hover { background-color: var(--hover-bg); }
+        
+        .edit-device-btn { padding: 8px 15px; background: #ffc107; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-block; margin-bottom: 15px;}
+        
+        .device-input-group { display: none; gap: 5px; margin-top: 10px; margin-bottom: 15px;}
+        .device-input-group.show { display: flex; }
+        .device-input-group input { padding: 8px; margin: 0; font-size: 14px; }
+        .device-input-group button { padding: 8px 15px; width: auto; margin: 0; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;}
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">HHTDSK - ADMIN</div>
+        <div class="nav-right">
+            <a href="index.html" class="nav-link">Về trang chủ</a>
+            <button class="filter-btn" onclick="toggleTheme()" id="theme-toggle-btn">
+                <span id="theme-icon">Đổi giao diện</span>
+            </button>
+            <a href="#" class="nav-link" id="btn-logout" style="color: #dc3545;">Đăng xuất</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 20px;">Quản lý Người dùng</h1>
+        
+        <div class="admin-layout">
+            <!-- CỘT TRÁI: DANH SÁCH NGƯỜI DÙNG -->
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <h3 style="padding: 15px; border-bottom: 1px solid var(--border-color); background: var(--hover-bg);">Danh sách</h3>
+                <ul class="user-list" id="user-list">
+                    <li style="padding: 15px; text-align: center;">Đang tải danh sách...</li>
+                </ul>
+            </div>
+
+            <!-- CỘT PHẢI: DỮ LIỆU CỦA NGƯỜI DÙNG ĐƯỢC CHỌN -->
+            <div class="card" id="data-section" style="display: none;">
+                <h3 id="selected-user-title" style="margin-bottom: 5px; word-break: break-all;">Chưa chọn người dùng</h3>
+                
+                <button class="edit-device-btn" onclick="document.getElementById('device-input-group').classList.toggle('show')">Đổi tên thiết bị</button>
+                
+                <div class="device-input-group" id="device-input-group">
+                    <input type="text" id="admin-edit-device" placeholder="Nhập tên thiết bị mới...">
+                    <button onclick="updateUserDevice()">Lưu thiết bị</button>
+                </div>
+
+                <div class="filter-group" style="margin-top: 10px;">
+                    <button class="filter-btn active" onclick="changeFilter('today', this)">Hôm nay</button>
+                    <button class="filter-btn" onclick="changeFilter('week', this)">7 ngày qua</button>
+                    <button class="filter-btn" onclick="changeFilter('month', this)">30 ngày qua</button>
+                    <span style="margin-left: 10px; color: var(--text-muted); font-size: 14px;">Hoặc chọn ngày:</span>
+                    <input type="date" id="admin-custom-date" class="filter-btn" style="padding: 7px;" onchange="changeFilter('custom', null)">
+                </div>
+
+                <div class="chart-grid">
+                    <div class="chart-box">
+                        <canvas id="adminChartHeart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="adminChartBp"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="adminChartTemp"></canvas>
+                    </div>
+                </div>
+
+                <h3>Lịch sử chi tiết</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Nhịp tim</th>
+                                <th>Huyết áp</th>
+                                <th>Nhiệt độ</th>
+                                <th>Thiết bị gửi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card" id="empty-state" style="text-align: center; color: var(--text-muted); padding: 50px;">
+                <h3>Vui lòng chọn một người dùng bên trái để xem dữ liệu</h3>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBGYMJAbGzqt7P-A81ZaTH36e7TfeOZ8cQ", 
+            authDomain: "projectyte-39e44.firebaseapp.com", 
+            projectId: "projectyte-39e44", 
+            storageBucket: "projectyte-39e44.firebasestorage.app", 
+            messagingSenderId: "324613625858", 
+            appId: "1:324613625858:web:3ff3f0798993708c396f1b" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const $ = (id) => document.getElementById(id);
+        
+        let allUsers = [];
+        let selectedUserId = null;
+        let userDataListener = null;
+        let currentUserRecords = [];
+        let currentFilterType = 'today';
+        let charts = { heart: null, bp: null, temp: null };
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        window.toggleTheme = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeIcon(theme);
+            if (currentUserRecords.length > 0) renderAdminCharts(currentFilterType);
+        };
+
+        function updateThemeIcon(theme) {
+            document.getElementById('theme-icon').textContent = theme === 'light' ? 'Giao diện Tối' : 'Giao diện Sáng';
+        }
+
+        $('btn-logout').onclick = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                if (user.email === "khuchaoqh@gmail.com") {
+                    loadAllUsers();
+                } else {
+                    alert("Bạn không có quyền truy cập trang này! Hãy đăng nhập bằng tài khoản Admin.");
+                    window.location.href = "index.html";
+                }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        async function loadAllUsers() {
+            try {
+                const usersRef = collection(db, "users");
+                const snapshot = await getDocs(usersRef);
+                const list = $('user-list');
+                list.innerHTML = '';
+                allUsers = [];
+
+                if (snapshot.empty) {
+                    list.innerHTML = '<li style="padding: 15px; text-align: center;">Chưa có người dùng nào.</li>';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    allUsers.push({ uid: doc.id, ...data });
+                    
+                    const li = document.createElement('li');
+                    li.className = 'user-item';
+                    
+                    let avatarHTML = '';
+                    if (data.avatar) {
+                        avatarHTML = `<img src="${data.avatar}" class="user-avatar" alt="Avt">`;
+                    } else {
+                        const firstLetter = (data.name || 'U').charAt(0).toUpperCase();
+                        avatarHTML = `<div class="user-avatar">${firstLetter}</div>`;
+                    }
+
+                    li.innerHTML = `
+                        ${avatarHTML}
+                        <div class="user-info">
+                            <strong>${data.name || 'Người dùng'}</strong>
+                            <small>${data.email || doc.id}</small>
+                        </div>
+                    `;
+                    li.onclick = () => selectUser(doc.id, data.name || data.email || doc.id, data.deviceId); 
+                    list.appendChild(li);
+                });
+
+            } catch (error) {
+                $('user-list').innerHTML = `<li style="padding: 15px; color: red;">Lỗi tải danh sách: ${error.message}</li>`;
+            }
+        }
+
+        function selectUser(uid, name, deviceId) {
+            selectedUserId = uid;
+            $('selected-user-title').textContent = `Dữ liệu của: ${name}`;
+            $('data-section').style.display = 'block';
+            $('empty-state').style.display = 'none';
+            
+            $('admin-edit-device').value = deviceId || '';
+            $('device-input-group').classList.remove('show');
+
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+
+            if (userDataListener) userDataListener();
+
+            const recordsRef = collection(db, 'users', uid, 'health_records');
+            const q = query(recordsRef, orderBy('createdAt', 'desc'), limit(200));
+
+            userDataListener = onSnapshot(q, (snapshot) => {
+                currentUserRecords = [];
+                snapshot.forEach((doc) => currentUserRecords.push({ id: doc.id, ...doc.data() }));
+                
+                renderAdminCharts(currentFilterType);
+                renderAdminTable();
+            });
+        }
+
+        window.updateUserDevice = async () => {
+            const newDevice = $('admin-edit-device').value.trim();
+            if (!selectedUserId) return;
+            
+            try {
+                await updateDoc(doc(db, "users", selectedUserId), {
+                    deviceId: newDevice
+                });
+                alert("Đã cập nhật tên thiết bị cho người dùng!");
+                $('device-input-group').classList.remove('show');
+                loadAllUsers();
+            } catch (error) {
+                alert("Lỗi khi lưu: " + error.message);
+            }
+        };
+
+        window.changeFilter = (type, btn) => {
+            currentFilterType = type;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            
+            if (type !== 'custom') {
+                if(btn) btn.classList.add('active');
+                document.getElementById('admin-custom-date').value = ''; 
+            }
+            if (currentUserRecords.length > 0) renderAdminCharts(currentFilterType);
+        };
+
+        function renderAdminCharts(filterType) {
+            const stats = {};
+            let labels = [];
+            const hrData = [], bpData = [], tempData = [];
+            
+            if (filterType === 'today') {
+                const todayStr = new Date().toLocaleDateString('vi-VN');
+                const todayRecords = currentUserRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate().toLocaleDateString('vi-VN') === todayStr).reverse();
+                
+                todayRecords.forEach(r => {
+                    const timeStr = r.createdAt.toDate().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                    if (!stats[timeStr]) stats[timeStr] = { hr: [], bp: [], temp: [] };
+                    if (r.heartRate) stats[timeStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[timeStr].bp.push(sys); }
+                    if (r.temperature) stats[timeStr].temp.push(r.temperature);
+                });
+            } else if (filterType === 'custom') {
+                const dateInput = document.getElementById('admin-custom-date').value;
+                if (!dateInput) return;
+                
+                const [year, month, day] = dateInput.split('-');
+                const targetDateStr = `${day}/${month}/${year}`;
+
+                const customRecords = currentUserRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate().toLocaleDateString('vi-VN') === targetDateStr).reverse();
+                
+                customRecords.forEach(r => {
+                    const timeStr = r.createdAt.toDate().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                    if (!stats[timeStr]) stats[timeStr] = { hr: [], bp: [], temp: [] };
+                    if (r.heartRate) stats[timeStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[timeStr].bp.push(sys); }
+                    if (r.temperature) stats[timeStr].temp.push(r.temperature);
+                });
+            } else {
+                const limitDays = filterType === 'week' ? 7 : 30;
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - limitDays);
+                cutoffDate.setHours(0,0,0,0);
+
+                const filteredRecords = currentUserRecords.filter(r => r.createdAt?.toDate && r.createdAt.toDate() >= cutoffDate).reverse();
+
+                filteredRecords.forEach(r => {
+                    const dateStr = r.createdAt.toDate().toLocaleDateString('vi-VN');
+                    if (!stats[dateStr]) stats[dateStr] = { hr: [], bp: [], temp: [] };
+                    if (r.heartRate) stats[dateStr].hr.push(r.heartRate);
+                    if (r.bloodPressure) { const sys = parseInt(r.bloodPressure.split('/')[0]); if(!isNaN(sys)) stats[dateStr].bp.push(sys); }
+                    if (r.temperature) stats[dateStr].temp.push(r.temperature);
+                });
+            }
+
+            labels = Object.keys(stats);
+            labels.forEach(key => {
+                const s = stats[key];
+                hrData.push(s.hr.length ? Math.round(s.hr.reduce((a,b)=>a+b,0)/s.hr.length) : null);
+                bpData.push(s.bp.length ? Math.round(s.bp.reduce((a,b)=>a+b,0)/s.bp.length) : null);
+                tempData.push(s.temp.length ? parseFloat((s.temp.reduce((a,b)=>a+b,0)/s.temp.length).toFixed(1)) : null);
+            });
+
+            if (labels.length === 0) {
+                labels = ['Không có dữ liệu'];
+                hrData.push(null); bpData.push(null); tempData.push(null);
+            }
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
+            const gridColor = isDark ? '#333333' : '#eaeaea';
+
+            const drawChart = (canvasId, chartKey, label, data, color, type) => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                if (charts[chartKey]) { charts[chartKey].destroy(); }
+
+                charts[chartKey] = new Chart(ctx, {
+                    type: type,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            backgroundColor: type === 'bar' ? color : 'rgba(0,0,0,0)',
+                            borderColor: color,
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointBackgroundColor: color,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            title: { display: true, text: label, color: textColor, font: {size: 16} }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                            y: { ticks: { color: textColor }, grid: { color: gridColor } }
+                        }
+                    }
+                });
+            };
+
+            drawChart('adminChartHeart', 'heart', 'Nhịp tim (bpm)', hrData, '#dc3545', 'line');
+            drawChart('adminChartBp', 'bp', 'Huyết áp (mmHg)', bpData, '#ffc107', 'line');
+            drawChart('adminChartTemp', 'temp', 'Nhiệt độ (°C)', tempData, '#17a2b8', 'line');
+        }
+
+        function renderAdminTable() {
+            const tbody = $('admin-table-body');
+            tbody.innerHTML = '';
+            
+            if (currentUserRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Chưa có dữ liệu</td></tr>';
+                return;
+            }
+
+            currentUserRecords.slice(0, 50).forEach(r => {
+                const time = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString('vi-VN') : 'Đang đồng bộ';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${time}</td>
+                        <td style="color: #dc3545; font-weight: bold;">${r.heartRate ?? '—'} bpm</td>
+                        <td style="color: #ffc107; font-weight: bold;">${r.bloodPressure ?? '—'}</td>
+                        <td style="color: #17a2b8; font-weight: bold;">${r.temperature ?? '—'} °C</td>
+                        <td>${r.deviceId ?? '—'}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

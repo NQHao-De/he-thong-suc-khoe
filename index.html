@@ -5,110 +5,235 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống theo dõi sức khỏe</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f7fa; color: #333; }
-        h1, h2, h3 { color: #1a1a2e; font-weight: 600; }
-        h1 { text-align: center; margin-bottom: 30px; }
-        .card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #eaeaea;
+            --input-bg: #ffffff;
+            --input-border: #cccccc;
+            --nav-bg: #ffffff;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            --hover-bg: #f9f9f9;
+            --record-bg: #f9f9f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333333;
+            --input-bg: #2d2d2d;
+            --input-border: #444444;
+            --nav-bg: #1e1e1e;
+            --nav-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            --hover-bg: #2a2a2a;
+            --record-bg: #2a2a2a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+        
+        h1, h2, h3 { color: var(--text-color); font-weight: 600; }
+        
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: var(--nav-bg); box-shadow: var(--nav-shadow);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; z-index: 1000; transition: background 0.3s;
+        }
+        
+        .navbar-brand { font-size: 20px; font-weight: 700; color: #007bff; display: flex; align-items: center; gap: 8px;}
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-link { text-decoration: none; color: #007bff; font-weight: 600; font-size: 15px; transition: 0.2s; }
+        .nav-link:hover { color: #0056b3; text-decoration: underline; }
+
+        .nav-user { position: relative; }
+        .avatar-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #007bff; color: white; font-weight: bold; font-size: 18px;
+            border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s; overflow: hidden;
+        }
+        .avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-btn:hover { opacity: 0.8; }
+
+        .dropdown-menu {
+            position: absolute; top: 50px; right: 0;
+            background: var(--card-bg); border-radius: 8px; min-width: 250px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
+            display: none; flex-direction: column; overflow: hidden; z-index: 1001;
+        }
+        .dropdown-menu.show { display: flex; }
+        
+        .dropdown-header { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .dropdown-header strong { display: block; font-size: 15px; color: var(--text-color);}
+        .dropdown-header small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px;}
+
+        .admin-badge {
+            display: inline-block; color: #dc3545; font-weight: bold; font-size: 11px;
+            border: 1px solid #dc3545; padding: 1px 6px; border-radius: 4px; margin-top: 6px;
+        }
+        
+        .dropdown-item {
+            padding: 12px 15px; text-decoration: none; color: var(--text-color);
+            font-size: 14px; cursor: pointer; border: none; background: transparent;
+            text-align: left; display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.2s;
+        }
+        .dropdown-item:hover { background: var(--hover-bg); }
+        .dropdown-item.danger { color: #dc3545; border-top: 1px solid var(--border-color); }
+
+        /* Khu vực đổi tên trong Dropdown */
+        .change-name-box { padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: none; gap: 5px;}
+        .change-name-box.show { display: flex; }
+        .change-name-box input { padding: 6px; margin: 0; font-size: 13px; }
+        .change-name-box button { padding: 6px 10px; margin: 0; width: auto; font-size: 13px; }
+
+        #avatar-upload { display: none; }
+
+        .container { max-width: 1000px; margin: 80px auto 20px auto; padding: 0 20px; }
+        
+        .card { background: var(--card-bg); padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        
+        input, button { font-family: inherit; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--input-border); font-size: 14px; outline: none; background: var(--input-bg); color: var(--text-color); }
         input:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
-        button { cursor: pointer; background: #007bff; color: white; border: none; font-weight: 600; transition: 0.2s; }
-        button:hover { background: #0056b3; }
+        
+        .btn-primary { width: 100%; padding: 12px; cursor: pointer; background: #007bff; color: white; border: none; font-weight: 600; border-radius: 8px; transition: 0.2s; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .hidden { display: none !important; }
-        .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        
+        .stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
         .stat:last-child { border-bottom: none; }
         .stat-value { font-weight: 700; font-size: 18px; color: #007bff; }
+        
         .records-list { max-height: 400px; overflow-y: auto; margin-top: 16px; }
-        .record-item { padding: 12px; background: #f9f9f9; border-left: 4px solid #007bff; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
-        .record-item .time { color: #888; font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 6px;}
+        .record-item { padding: 12px; background: var(--record-bg); border-left: 4px solid #007bff; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .record-item .time { color: var(--text-muted); font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 6px;}
         .record-item .data { margin-top: 6px; line-height: 1.5; }
-        .header-bar { display: flex; justify-content: space-between; align-items: center; }
-        .logout-btn { width: auto; padding: 10px 20px; background: #dc3545; margin: 0;}
-        .logout-btn:hover { background: #a71d2a; }
+        
         .live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #28a745; animation: blink 1s infinite; margin-right: 6px; }
         @keyframes blink { 50% { opacity: 0.3; } }
-        .device-tag { background: #e2e3e5; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #444; }
+        
+        .device-tag { background: #e2e3e5; color: #333; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        [data-theme="dark"] .device-tag { background: #444; color: #eee; }
+        
         .toggle-text { text-align: center; font-size: 13px; margin-top: 15px; color: #007bff; cursor: pointer; text-decoration: underline; }
         
-        /* CSS cho nút ẩn/hiện mật khẩu bằng chữ */
         .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 50px; margin: 8px 0; }
+        .password-wrapper input { padding-right: 50px; }
         .toggle-password {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            font-size: 13px;
-            color: #007bff;
-            user-select: none;
-            background: none;
-            border: none;
-            padding: 0;
-            width: auto;
-            margin: 0;
-            font-weight: 600;
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; font-size: 13px; color: #007bff; user-select: none;
+            background: none; border: none; padding: 0; width: auto; font-weight: 600;
         }
-        .toggle-password:hover { color: #0056b3; background: none; text-decoration: underline; }
+        
+        #auth-section { max-width: 400px; margin: 0 auto; }
+        .auth-title { text-align: center; margin-bottom: 20px; color: #dc3545; font-size: 24px; }
     </style>
 </head>
 <body>
 
-    <h1>Hệ thống theo dõi sức khỏe</h1>
-
-    <div id="auth-section" class="card">
-        <!-- FORM ĐĂNG NHẬP -->
-        <div id="login-form">
-            <h3>Đăng nhập</h3>
-            <input type="email" id="login-email" placeholder="Email">
-            <div class="password-wrapper">
-                <input type="password" id="login-password" placeholder="Mật khẩu">
-                <button type="button" class="toggle-password" onclick="togglePassword('login-password', this)">Hiện</button>
-            </div>
-            <button id="btn-login" style="background:#28a745; margin-top: 12px;">Đăng nhập</button>
-            <div class="toggle-text" onclick="toggleAuthForm('register')">Chưa có tài khoản? Đăng ký ngay</div>
-        </div>
-
-        <!-- FORM ĐĂNG KÝ -->
-        <div id="register-form" class="hidden">
-            <h3>Đăng ký tài khoản mới</h3>
-            <input type="email" id="reg-email" placeholder="Email">
+    <nav class="navbar hidden" id="main-navbar">
+        <div class="navbar-brand">HHTDSK</div>
+        
+        <div class="nav-right">
+            <a href="thongke.html" class="nav-link">Xem Thống Kê</a>
             
-            <!-- Thêm ô nhập Họ Tên -->
-            <input type="text" id="reg-name" placeholder="Họ và tên (VD: Nguyễn Văn A)">
-            
-            <div class="password-wrapper">
-                <input type="password" id="reg-password" placeholder="Mật khẩu (ít nhất 6 ký tự)">
-                <button type="button" class="toggle-password" onclick="togglePassword('reg-password', this)">Hiện</button>
-            </div>
-            <input type="text" id="reg-device" placeholder="Mã thiết bị y tế (VD: ESP32-001)">
-            <button id="btn-signup" style="margin-top: 12px;">Tạo tài khoản</button>
-            <div class="toggle-text" onclick="toggleAuthForm('login')">Đã có tài khoản? Đăng nhập</div>
-        </div>
+            <div class="nav-user">
+                <button class="avatar-btn" id="avatar-btn" onclick="toggleDropdown()">
+                    <span id="avatar-text">U</span>
+                    <img id="avatar-image" src="" alt="Avatar" class="hidden">
+                </button>
+                
+                <input type="file" id="avatar-upload" accept="image/*">
+                
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-header">
+                        <strong id="nav-user-name">Người dùng</strong>
+                        <small id="nav-user-email">email@gmail.com</small>
+                        <span id="admin-badge" class="admin-badge hidden">Quản trị viên</span>
+                        <small style="margin-top: 8px; color: #17a2b8; display: block;">Thiết bị: <span id="nav-device-code">Chưa có</span></small>
+                    </div>
+                    
+                    <!-- Nút bấm để hiện ô đổi tên -->
+                    <button class="dropdown-item" onclick="document.getElementById('change-name-box').classList.toggle('show')">
+                        <span>Đổi tên hiển thị</span>
+                        <span>Sửa</span>
+                    </button>
+                    
+                    <!-- Ô nhập tên (mặc định ẩn) -->
+                    <div class="change-name-box" id="change-name-box">
+                        <input type="text" id="new-name-input" placeholder="Tên mới...">
+                        <button onclick="updateUserName()" class="btn-primary btn-success" style="background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer;">Lưu</button>
+                    </div>
 
-        <p id="auth-msg" style="color: red; font-size: 13px; margin-top: 8px; text-align: center;"></p>
+                    <button class="dropdown-item" onclick="document.getElementById('avatar-upload').click()">
+                        <span>Đổi ảnh đại diện</span>
+                        <span>Ảnh</span>
+                    </button>
+                    
+                    <a href="admin.html" id="admin-link" class="dropdown-item hidden" style="color: #007bff; font-weight: bold;">
+                        <span>Trang Quản Trị</span>
+                        <span>></span>
+                    </a>
+
+                    <button class="dropdown-item" onclick="toggleTheme()" id="theme-toggle-btn">
+                        <span>Giao diện Sáng/Tối</span>
+                        <span id="theme-icon">Tối</span>
+                    </button>
+                    <button class="dropdown-item danger" id="btn-logout">
+                        <span>Đăng xuất</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" id="auth-container">
+        <div id="auth-section" class="card">
+            <div id="login-form">
+                <h3 class="auth-title">Đăng nhập</h3>
+                <input type="email" id="login-email" placeholder="Email">
+                <div class="password-wrapper">
+                    <input type="password" id="login-password" placeholder="Mật khẩu">
+                    <button type="button" class="toggle-password" onclick="togglePassword('login-password', this)">Hiện</button>
+                </div>
+                <button id="btn-login" class="btn-primary btn-success" style="margin-top: 12px;">Đăng nhập</button>
+                <div class="toggle-text" onclick="toggleAuthForm('register')">Chưa có tài khoản? Đăng ký ngay</div>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <h3 class="auth-title">Tạo tài khoản</h3>
+                <input type="email" id="reg-email" placeholder="Email">
+                <input type="text" id="reg-name" placeholder="Họ và tên (VD: Nguyễn Văn A)">
+                <div class="password-wrapper">
+                    <input type="password" id="reg-password" placeholder="Mật khẩu (ít nhất 6 ký tự)">
+                    <button type="button" class="toggle-password" onclick="togglePassword('reg-password', this)">Hiện</button>
+                </div>
+                <input type="text" id="reg-device" placeholder="Mã thiết bị y tế (VD: ESP32-001)">
+                <button id="btn-signup" class="btn-primary" style="margin-top: 12px;">Đăng ký</button>
+                <div class="toggle-text" onclick="toggleAuthForm('login')">Đã có tài khoản? Đăng nhập</div>
+            </div>
+
+            <p id="auth-msg" style="color: #dc3545; font-size: 13px; margin-top: 15px; text-align: center;"></p>
+        </div>
     </div>
 
-    <div id="dashboard" class="hidden">
-        <div class="card header-bar">
-            <div>
-                <!-- Thay đổi giao diện hiển thị Tên và Email -->
-                <strong>Xin chào: <span id="user-name" style="color: #007bff;"></span></strong><br>
-                <small style="color:#666;">Email: <span id="user-email"></span></small><br>
-                <small style="color:#666; display:inline-block; margin-top:8px;">
-                    Mã thiết bị liên kết: <span id="display-device-code" class="device-tag">Đang tải...</span>
-                </small>
-            </div>
-            <button id="btn-logout" class="logout-btn">Đăng xuất</button>
-        </div>
-
+    <div class="container hidden" id="dashboard-container">
+        
         <div class="card">
             <h3><span class="live-dot"></span> Chỉ số mới nhất (Realtime)</h3>
             <div class="stat"><span>Nhịp tim</span><span class="stat-value" id="stat-heart">— bpm</span></div>
             <div class="stat"><span>Huyết áp</span><span class="stat-value" id="stat-bp">— mmHg</span></div>
             <div class="stat"><span>Nhiệt độ</span><span class="stat-value" id="stat-temp">— °C</span></div>
-            <div class="stat"><span>Số bước</span><span class="stat-value" id="stat-steps">—</span></div>
         </div>
 
         <div class="card">
@@ -119,10 +244,10 @@
             </div>
             <div class="row">
                 <input type="number" id="in-temp" step="0.1" placeholder="Nhiệt độ (°C)">
-                <input type="number" id="in-steps" placeholder="Số bước">
+                <div></div>
             </div>
-            <button id="btn-send">Gửi dữ liệu</button>
-            <p id="send-msg" style="font-size:13px; margin-top:8px;"></p>
+            <button id="btn-send" class="btn-primary" style="margin-top: 10px;">Gửi dữ liệu</button>
+            <p id="send-msg" style="font-size:13px; margin-top:8px; text-align: center;"></p>
         </div>
 
         <div class="card">
@@ -133,10 +258,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        // Cập nhật thêm hàm updateProfile để lưu tên vào tài khoản
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile }
             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp }
+        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, doc, setDoc, getDoc }
             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = { 
@@ -155,19 +279,40 @@
         const $ = (id) => document.getElementById(id);
         let unsubscribeRecords = null;
 
-        // --- HÀM XỬ LÝ ẨN/HIỆN MẬT KHẨU ---
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        window.toggleTheme = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeIcon(theme);
+        };
+
+        function updateThemeIcon(theme) {
+            document.getElementById('theme-icon').textContent = theme === 'light' ? 'Tối' : 'Sáng';
+        }
+
+        window.toggleDropdown = () => {
+            $('dropdown-menu').classList.toggle('show');
+        };
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.nav-user')) {
+                $('dropdown-menu').classList.remove('show');
+            }
+        }
+
         window.togglePassword = (inputId, btnElement) => {
             const input = document.getElementById(inputId);
             if (input.type === "password") {
-                input.type = "text";
-                btnElement.textContent = "Ẩn";
+                input.type = "text"; btnElement.textContent = "Ẩn";
             } else {
-                input.type = "password";
-                btnElement.textContent = "Hiện";
+                input.type = "password"; btnElement.textContent = "Hiện";
             }
         };
 
-        // --- HÀM CHUYỂN ĐỔI FORM ĐĂNG NHẬP / ĐĂNG KÝ ---
         window.toggleAuthForm = (form) => {
             $('auth-msg').textContent = '';
             if (form === 'register') {
@@ -179,80 +324,134 @@
             }
         };
 
-        // --- QUẢN LÝ MÃ THIẾT BỊ ---
         const getSavedDeviceCode = (uid) => localStorage.getItem('dev_code_' + uid);
         const saveDeviceCode = (uid, code) => localStorage.setItem('dev_code_' + uid, code);
 
-        // --- XỬ LÝ ĐĂNG KÝ ---
         $('btn-signup').onclick = async () => {
             const email = $('reg-email').value;
-            const name = $('reg-name').value.trim(); // Lấy tên
+            const name = $('reg-name').value.trim();
             const password = $('reg-password').value;
             const devCode = $('reg-device').value.trim();
             
-            if (!name) {
-                $('auth-msg').style.color = 'red';
-                $('auth-msg').textContent = 'Vui lòng nhập Họ và tên!';
-                return;
-            }
-            if (!devCode) {
-                $('auth-msg').style.color = 'red';
-                $('auth-msg').textContent = 'Vui lòng nhập mã thiết bị để liên kết!';
+            if (!name || !devCode) {
+                $('auth-msg').textContent = 'Vui lòng nhập đủ Họ tên và Mã thiết bị!';
                 return;
             }
 
             $('auth-msg').textContent = '';
             try {
-                // Tạo tài khoản
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                
-                // Lưu tên hiển thị vào hồ sơ Firebase (đăng nhập máy nào cũng thấy)
                 await updateProfile(userCredential.user, { displayName: name });
-                
-                // Lưu mã thiết bị
                 saveDeviceCode(userCredential.user.uid, devCode);
                 
-                $('auth-msg').style.color = 'green';
+                await setDoc(doc(db, "users", userCredential.user.uid), {
+                    name: name,
+                    email: email,
+                    avatar: "",
+                    createdAt: serverTimestamp()
+                });
+
+                $('auth-msg').style.color = '#28a745';
                 $('auth-msg').textContent = 'Đăng ký thành công!';
-                $('reg-device').value = '';
-                $('reg-name').value = '';
+                $('reg-device').value = ''; $('reg-name').value = '';
             } catch (e) { 
-                $('auth-msg').style.color = 'red';
+                $('auth-msg').style.color = '#dc3545';
                 $('auth-msg').textContent = 'Lỗi: ' + e.message; 
             }
         };
 
-        // --- XỬ LÝ ĐĂNG NHẬP ---
         $('btn-login').onclick = async () => {
             const email = $('login-email').value;
             const password = $('login-password').value;
-            
             $('auth-msg').textContent = '';
             try {
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (e) { 
-                $('auth-msg').style.color = 'red';
+                $('auth-msg').style.color = '#dc3545';
                 $('auth-msg').textContent = 'Lỗi: ' + e.message; 
             }
         };
 
-        // --- ĐĂNG XUẤT ---
         $('btn-logout').onclick = () => signOut(auth);
 
-        // --- THEO DÕI TRẠNG THÁI ĐĂNG NHẬP ---
-        onAuthStateChanged(auth, (user) => {
+        window.updateUserName = async () => {
+            const newName = $('new-name-input').value.trim();
+            const user = auth.currentUser;
+            if (!newName) { alert("Vui lòng nhập tên mới!"); return; }
+            if (!user) return;
+
+            try {
+                await updateProfile(user, { displayName: newName });
+                await setDoc(doc(db, "users", user.uid), { name: newName }, { merge: true });
+                
+                $('nav-user-name').textContent = newName;
+                $('new-name-input').value = '';
+                $('change-name-box').classList.remove('show'); // Ẩn ô nhập sau khi lưu
+                alert("Đổi tên thành công!");
+            } catch (e) {
+                alert("Lỗi đổi tên: " + e.message);
+            }
+        };
+
+        $('avatar-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const imageUrl = event.target.result;
+                    const user = auth.currentUser;
+                    if (user) {
+                        $('avatar-image').src = imageUrl;
+                        $('avatar-image').classList.remove('hidden');
+                        $('avatar-text').classList.add('hidden');
+                        
+                        try {
+                            await setDoc(doc(db, "users", user.uid), {
+                                avatar: imageUrl
+                            }, { merge: true });
+                        } catch (error) {
+                            console.error("Lỗi lưu ảnh:", error);
+                        }
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
             if (unsubscribeRecords) { unsubscribeRecords(); unsubscribeRecords = null; }
 
             if (user) {
-                $('auth-section').classList.add('hidden');
-                $('dashboard').classList.remove('hidden');
+                $('auth-container').classList.add('hidden');
+                $('dashboard-container').classList.remove('hidden');
+                $('main-navbar').classList.remove('hidden');
                 
-                // Lấy tên hiển thị từ Firebase (nếu chưa có thì hiển thị "Người dùng")
-                $('user-name').textContent = user.displayName || 'Người dùng';
-                $('user-email').textContent = user.email;
+                $('nav-user-name').textContent = user.displayName || 'Người dùng';
+                $('nav-user-email').textContent = user.email;
+                
+                const userDocRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userDocRef);
+                
+                if (userSnap.exists() && userSnap.data().avatar) {
+                    $('avatar-image').src = userSnap.data().avatar;
+                    $('avatar-image').classList.remove('hidden');
+                    $('avatar-text').classList.add('hidden');
+                } else {
+                    $('avatar-image').classList.add('hidden');
+                    $('avatar-text').classList.remove('hidden');
+                    $('avatar-text').textContent = (user.displayName || 'U').charAt(0).toUpperCase();
+                }
+
+                if (user.email === "khuchaoqh@gmail.com") {
+                    $('admin-badge').classList.remove('hidden');
+                    $('admin-link').classList.remove('hidden');
+                } else {
+                    $('admin-badge').classList.add('hidden');
+                    $('admin-link').classList.add('hidden');
+                }
                 
                 const savedCode = getSavedDeviceCode(user.uid);
-                $('display-device-code').textContent = savedCode || 'Chưa liên kết trên thiết bị này';
+                $('nav-device-code').textContent = savedCode || 'Chưa liên kết';
 
                 resetStats();
                 $('records-list').innerHTML = '';
@@ -260,8 +459,13 @@
 
                 startRealtimeListener(user.uid);
             } else {
-                $('auth-section').classList.remove('hidden');
-                $('dashboard').classList.add('hidden');
+                $('auth-container').classList.remove('hidden');
+                $('dashboard-container').classList.add('hidden');
+                $('main-navbar').classList.add('hidden');
+                $('dropdown-menu').classList.remove('show');
+                $('admin-badge').classList.add('hidden');
+                $('admin-link').classList.add('hidden');
+                
                 resetStats();
                 $('records-list').innerHTML = '';
                 $('record-count').textContent = '0';
@@ -274,10 +478,9 @@
             }
         });
 
-        // --- HIỂN THỊ DỮ LIỆU REALTIME ---
         function startRealtimeListener(uid) {
             const recordsRef = collection(db, 'users', uid, 'health_records');
-            const q = query(recordsRef, orderBy('createdAt', 'desc'), limit(50));
+            const q = query(recordsRef, orderBy('createdAt', 'desc'), limit(100)); 
 
             unsubscribeRecords = onSnapshot(q, (snapshot) => {
                 const list = $('records-list');
@@ -286,6 +489,7 @@
                 snapshot.forEach((doc) => records.push({ id: doc.id, ...doc.data() }));
 
                 $('record-count').textContent = records.length;
+                
                 if (records.length === 0) {
                     list.innerHTML = '<p style="color:#999;text-align:center;">Chưa có dữ liệu.</p>';
                     resetStats();
@@ -296,7 +500,6 @@
                 $('stat-heart').textContent = (latest.heartRate ?? '—') + ' bpm';
                 $('stat-bp').textContent    = (latest.bloodPressure ?? '—') + ' mmHg';
                 $('stat-temp').textContent  = (latest.temperature ?? '—') + ' °C';
-                $('stat-steps').textContent = latest.stepCount?.toLocaleString('vi-VN') ?? '—';
 
                 records.forEach(r => {
                     const div = document.createElement('div');
@@ -309,11 +512,11 @@
                         <div class="data">
                             Nhịp tim: <b>${r.heartRate ?? '—'}</b> bpm | 
                             Huyết áp: <b>${r.bloodPressure ?? '—'}</b> | 
-                            Nhiệt độ: <b>${r.temperature ?? '—'}</b> °C | 
-                            Bước chân: <b>${r.stepCount?.toLocaleString('vi-VN') ?? '—'}</b>
+                            Nhiệt độ: <b>${r.temperature ?? '—'}</b> °C
                         </div>`;
                     list.appendChild(div);
                 });
+
             }, (err) => {
                 $('records-list').innerHTML = `<p style="color:red;">Lỗi: ${err.message}</p>`;
             });
@@ -323,10 +526,8 @@
             $('stat-heart').textContent = '— bpm';
             $('stat-bp').textContent = '— mmHg';
             $('stat-temp').textContent = '— °C';
-            $('stat-steps').textContent = '—';
         }
 
-        // --- GỬI DỮ LIỆU NHẬP TAY ---
         $('btn-send').onclick = async () => {
             const user = auth.currentUser;
             if (!user) return;
@@ -335,25 +536,24 @@
                 heartRate: parseInt($('in-heart').value) || null,
                 bloodPressure: $('in-bp').value.trim() || null,
                 temperature: parseFloat($('in-temp').value) || null,
-                stepCount: parseInt($('in-steps').value) || null,
-                deviceId: getSavedDeviceCode(user.uid) || 'Nhập tay', 
+                deviceId: 'Nhập tay', 
                 createdAt: serverTimestamp()
             };
 
-            if (Object.values(data).slice(0, 4).every(v => v === null)) {
-                $('send-msg').style.color = 'red';
+            if (data.heartRate === null && data.bloodPressure === null && data.temperature === null) {
+                $('send-msg').style.color = '#dc3545';
                 $('send-msg').textContent = 'Vui lòng nhập ít nhất 1 chỉ số.';
                 return;
             }
 
             try {
                 await addDoc(collection(db, 'users', user.uid, 'health_records'), data);
-                $('send-msg').style.color = 'green';
+                $('send-msg').style.color = '#28a745';
                 $('send-msg').textContent = 'Gửi dữ liệu thành công!';
-                ['in-heart', 'in-bp', 'in-temp', 'in-steps'].forEach(id => $(id).value = '');
+                ['in-heart', 'in-bp', 'in-temp'].forEach(id => $(id).value = '');
                 setTimeout(() => $('send-msg').textContent = '', 3000);
             } catch (e) {
-                $('send-msg').style.color = 'red';
+                $('send-msg').style.color = '#dc3545';
                 $('send-msg').textContent = 'Lỗi: ' + e.message;
             }
         };
