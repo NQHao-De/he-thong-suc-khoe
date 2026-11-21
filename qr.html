@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách mã QR – PJYT</title>
+    
+    <!-- Thư viện tạo QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #1e40af; margin-bottom: 10px; text-align: center; }
+        p { color: #64748b; margin-bottom: 40px; text-align: center; }
+        
+        /* Lưới chứa các mã QR */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        /* Thẻ chứa từng mã QR */
+        .qr-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .qr-card h3 {
+            font-size: 1rem;
+            color: #1e293b;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        /* Khung chứa mã QR */
+        .qr-box {
+            padding: 10px;
+            background: #ffffff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Nút quay lại */
+        .back-btn {
+            margin-top: 40px;
+            text-decoration: none;
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .back-btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+
+    <h1>Mã QR Trang Web</h1>
+    <p>Quét mã để truy cập nhanh các trang trong dự án</p>
+
+    <!-- Khung chứa mã QR (Sẽ được JS tự động điền vào) -->
+    <div class="qr-grid" id="qr-container"></div>
+
+    <a href="index.html" class="back-btn">← Quay lại Trang chủ</a>
+
+    <script>
+        // 1. Đường link gốc của trang web trên GitHub
+        const baseUrl = "https://nqhao-de.github.io/he-thong-suc-khoe/";
+
+        // 2. Danh sách các trang cần tạo QR (Đã khớp 100% với thư mục của bạn)
+        const pages = [
+            { title: "Trang Chủ", file: "index.html" },
+            { title: "Thống Kê", file: "thongke.html" }
+        ];
+
+        const container = document.getElementById('qr-container');
+
+        // 3. Vòng lặp tự động tạo thẻ HTML và mã QR
+        pages.forEach((page, index) => {
+            // Tạo thẻ div chứa
+            const card = document.createElement('div');
+            card.className = 'qr-card';
+
+            // Tạo tiêu đề
+            const title = document.createElement('h3');
+            title.innerText = page.title;
+
+            // Tạo khung chứa QR
+            const qrBox = document.createElement('div');
+            qrBox.className = 'qr-box';
+            qrBox.id = 'qr-' + index;
+
+            // Ghép thẻ lại với nhau
+            card.appendChild(title);
+            card.appendChild(qrBox);
+            container.appendChild(card);
+
+            // Tạo mã QR
+            new QRCode(qrBox, {
+                text: baseUrl + page.file,
+                width: 150,
+                height: 150,
+                colorDark : "#1e40af",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        });
+    </script>
+
+</body>
+</html>
